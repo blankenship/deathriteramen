@@ -78,8 +78,8 @@ footer h3:last-child {
 
 /*--BONES */
 
-header,
-footer {
+footer,
+main {
 	display: grid;
 	grid-template-columns: calc(50% - 1rem) calc(50% - 1rem);
 	grid-gap: 2rem;
@@ -90,7 +90,8 @@ section {
 	border-bottom: 2px solid black; 
 }
 
-main {
+header {
+	border-bottom: 4px solid black; 
 	margin: 0 auto;
 	padding: 0;
 	padding: 2rem 0 0;
@@ -108,10 +109,6 @@ img {
 	max-width: 100%; 
 	min-width: 100%; 
 	border-radius: 10px;
-}
-
-header {
-	border-bottom: 4px solid black; 
 }
 
 main {

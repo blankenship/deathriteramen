@@ -49,100 +49,18 @@
 	</main>
 
 	<section>
-		<figure>
-    		<div class="image-placeholder loading">...</div>
-    		<img data-src="@images/deatheriteramen.fpo.atl.jpg" alt="Description">
-		</figure>
-		<figure>
-		    <div class="image-placeholder loading">...</div>
-		    <img data-src="@images/joshuablankenship.magicsinglesred.jpg" alt="Description">
-		</figure>	
-		<figure>
-		    <div class="image-placeholder loading">...</div>
-		    <img data-src="@images/deatheriteramen.fpo.bird.jpg" alt="Description">
-		</figure>
-		<figure>
-		    <div class="image-placeholder loading">...</div>
-		    <img data-src="@images/joshuablankenship.magicsingles.jpg" alt="Description">
-		</figure>	
-		<figure>
-		    <div class="image-placeholder loading">...</div>
-		    <img data-src="@images/deatheriteramen.fpo.fam.jpg" alt="Description">
-		</figure>	
-				<figure>
-		    <div class="image-placeholder loading">...</div>
-		    <img data-src="@images/joshuablankenship.magicsingleswhite.jpg" alt="Description">
-		</figure>	
-		<figure>
-		    <div class="image-placeholder loading">...</div>
-		    <img data-src="@images/deatheriteramen.fpo.food.jpg" alt="Description">
-		</figure>	
+		<img data-src="@images/joshuablankenship.magicsinglesred.jpg" alt="Description">
+		<img data-src="@images/deatheriteramen.fpo.bird.jpg" alt="Description">
+		<img data-src="@images/joshuablankenship.magicsingles.jpg" alt="Description">
+		<img data-src="@images/deatheriteramen.fpo.fam.jpg" alt="Description">
+		<img data-src="@images/joshuablankenship.magicsingleswhite.jpg" alt="Description">
+		<img data-src="@images/deatheriteramen.fpo.food.jpg" alt="Description">
 	</section>
 
 	<footer>
 		<h3>&copy;<script>document.write(new Date().getFullYear())</script></h3>
 		<h3><a href="mailto:joshua@blankenship.xyz">Email Me</a></h3>
 	</footer>
-
-<script>
-class LazyImageLoader {
-    constructor() {
-        this.observer = new IntersectionObserver(
-            (entries) => this.handleIntersection(entries),
-            {
-                root: null,
-                rootMargin: '50px',
-                threshold: 0.1
-            }
-        );
-        this.init();
-    }
-
-    init() {
-        const images = document.querySelectorAll('img[data-src]');
-        images.forEach(img => this.observer.observe(img));
-    }
-
-    handleIntersection(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                this.loadImage(img);
-                this.observer.unobserve(img);
-            }
-        });
-    }
-
-    loadImage(img) {
-        const src = img.getAttribute('data-src');
-        const placeholder = img.parentElement.querySelector('.image-placeholder');
-        
-        img.onload = () => {
-            img.classList.add('loaded');
-            img.removeAttribute('data-src');
-            
-            // Remove placeholder
-            if (placeholder) {
-                placeholder.remove();
-            }
-        };
-
-        img.onerror = () => {
-            if (placeholder) {
-                placeholder.textContent = 'Failed to load';
-                placeholder.classList.remove('loading');
-            }
-        };
-
-        img.src = src;
-    }
-}
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    new LazyImageLoader();
-});
-</script>
 
 </body>
 </html>
