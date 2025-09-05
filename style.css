@@ -1,0 +1,224 @@
+/* 
+
+styles:		joshublankenship.com
+
+
+origin: 	1.0 — 07/11/25
+version: 	1.1 — 07/14/25 Update
+author: 	Joshua Blankenship
+email: 		joshua@blankenship.xyz
+website: 	http://blankenship.xyz
+
+/*--FOUNDATION */
+
+*, html, body, div, span, object, iframe,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, samp,
+small, strike, strong, sub, sup, tt, var,
+dl, dt, dd, ol, ul, li, img, figure, figcaption,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td {
+	-moz-box-sizing: border-box; 
+	-webkit-box-sizing: border-box; 
+	box-sizing: border-box;
+	-webkit-font-smoothing: antialiased; 
+	font-smoothing: antialiased;
+	margin: 0;
+	padding: 0;
+	outline: none;
+	}
+
+html {
+	font-size: 16px;
+}
+
+body {
+	background: #f5f5f5;
+	color: black;
+	line-height: 1.5;
+	margin: 0 auto;
+	padding: 5rem;
+	max-width: 3000px;
+}
+
+/*--TYPOGRAPHY */
+
+h1,
+h2,
+h3 {
+	font: 900 10em/1em "dharma-gothic-c", sans-serif;
+	text-transform: uppercase;
+	}
+
+main a { 
+	border-bottom: 2px solid Chartreuse;
+	color: MediumSeaGreen;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+main a:hover { 
+	background: Chartreuse;
+}
+
+h1 a,
+h3 a { 
+	color: black; 
+	text-decoration: none;
+}
+
+header h2,
+footer h3:last-child { 
+	text-align: right;
+}
+
+
+/*--BONES */
+
+header,
+footer {
+	display: grid;
+	grid-template-columns: calc(50% - 1rem) calc(50% - 1rem);
+	grid-gap: 2rem;
+}
+
+section {
+	border-top: 2px solid black; 
+	border-bottom: 2px solid black; 
+}
+
+main,
+section {
+	column-count: 3;
+	column-gap: 2rem;
+	column-width: 33.3333%;
+	padding: 2rem 0 0;
+}
+
+img { 
+	margin-bottom: 2rem;
+	max-width: 100%; 
+	min-width: 100%; 
+}
+
+header {
+	border-bottom: 4px solid black; 
+}
+
+main {
+	padding-bottom: 4rem;
+}
+
+main p {
+	font: 1.15rem/1.6rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif;;
+	text-indent: 3.2rem;
+}
+
+main p:last-of-type { padding-bottom: 1.6rem; }
+
+main img { 
+	filter: grayscale(100%);
+	opacity: 50%;
+	width: 100%;
+	object-fit: cover; 
+}
+
+main img:hover {
+	filter: grayscale(0%);
+	opacity: 100%;
+}
+
+/* SCRUNCH */
+
+	@media (min-width: 2000px) and (max-width: 3000px) {
+
+		main,
+		section {
+			column-count: 4;
+			column-gap: 2rem;
+			column-width: 25%;
+		}	
+	}
+
+	@media (min-width: 801px) and (max-width: 1200px) {
+
+		main,
+		section {
+			column-count: 2;
+			column-gap: 2rem;
+			column-width: 50%;
+		}		
+
+		h1,
+		h2,
+		h3 {
+			font: 900 7em/1em "dharma-gothic-c", sans-serif;
+	  	}
+	}
+
+	@media (min-width: 1px) and (max-width: 800px) {
+
+		body {
+			padding: 2rem;
+		}
+
+		main,
+		section {
+			column-count: 1;
+			column-gap: 0;
+			column-width: 100%;
+		}
+
+
+		h1,
+		h2,
+		h3 {
+			font: 900 3.2em/1em "dharma-gothic-c", sans-serif;
+	  	}
+	}
+
+sup {
+	color: #999;
+	vertical-align: super;
+	text-transform: uppercase;
+	margin-left: .1rem;
+	font: bold .6rem/1.6rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif;;
+}
+
+/* LAZY LOAD */
+
+img[data-src] {
+    opacity: 0;
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+img.loaded {
+    opacity: 1;
+}
+
+.image-placeholder {
+    width: 100%;
+    height: 200px;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 2rem;
+}
+
+.loading {
+    animation: abracadabra 1.5s ease-in-out infinite;
+
+
+@keyframes abracadabra {
+    0%, 100% { 
+        opacity: 0.8; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.4; 
+        transform: scale(1.01);
+    }
+}
