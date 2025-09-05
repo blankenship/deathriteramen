@@ -48,9 +48,8 @@ h1 {
 	letter-spacing: -2px;
 }
 
-h2,
 h3 {
-	font: 400 2em/1em "jacquard-12", sans-serif;
+	font: 400 4em/1em "jacquard-12", sans-serif;
 	}
 
 
@@ -92,9 +91,8 @@ section {
 }
 
 main {
-	column-count: 2;
-	column-gap: 2rem;
-	column-width: 50%;
+	margin: 0 auto;
+	padding: 0;
 	padding: 2rem 0 0;
 }
 
