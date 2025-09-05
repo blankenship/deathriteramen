@@ -44,8 +44,8 @@ body {
 /*--TYPOGRAPHY */
 
 h1 {
-	font: 400 6em/1em "jacquard-12", sans-serif;
-	letter-spacing: -2px;
+	font: 400 5em/1em "jacquard-12", sans-serif;
+	letter-spacing: -3px;
 }
 
 h3 {
@@ -86,8 +86,8 @@ main {
 }
 
 section {
-	border-top: 2px solid black; 
-	border-bottom: 2px solid black; 
+	border-top: 4px solid black; 
+	border-bottom: 4px solid black; 
 }
 
 header {
@@ -95,6 +95,7 @@ header {
 	margin: 0 auto;
 	padding: 0;
 	padding: 2rem 0 0;
+	text-align: center;
 }
 
 section {
@@ -112,7 +113,7 @@ img {
 }
 
 main {
-	padding-bottom: 4rem;
+	padding: 4rem 0;
 }
 
 main p {
