@@ -1,13 +1,13 @@
 /* 
 
-styles:		joshublankenship.com
+styles:		deathritera.men
 
 
-origin: 	1.0 — 07/11/25
+origin: 	1.0 — 09/05/25
 version: 	1.1 — 07/14/25 Update
 author: 	Joshua Blankenship
 email: 		joshua@blankenship.xyz
-website: 	http://blankenship.xyz
+website: 	http://joshuablankenship.com
 
 /*--FOUNDATION */
 
@@ -43,12 +43,15 @@ body {
 
 /*--TYPOGRAPHY */
 
-h1,
+h1 {
+	font: 400 10em/1em "jacquard-12", sans-serif;
+	}
+
 h2,
 h3 {
-	font: 900 10em/1em "dharma-gothic-c", sans-serif;
-	text-transform: uppercase;
+	font: 400 5em/1em "jacquard-12", sans-serif;
 	}
+
 
 main a { 
 	border-bottom: 2px solid Chartreuse;
