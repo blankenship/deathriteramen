@@ -90,7 +90,13 @@ section {
 	border-bottom: 2px solid black; 
 }
 
-main,
+main {
+	column-count: 2;
+	column-gap: 2rem;
+	column-width: 66.6666% 33.3333%;
+	padding: 2rem 0 0;
+}
+
 section {
 	column-count: 3;
 	column-gap: 2rem;
