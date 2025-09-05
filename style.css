@@ -44,8 +44,8 @@ body {
 /*--TYPOGRAPHY */
 
 h1 {
-	font: 400 5em/1em "jacquard-12", sans-serif;
-	letter-spacing: -3px;
+	font: 400 10em/1em "jacquard-12", sans-serif;
+	letter-spacing: -10px;
 }
 
 h3 {
