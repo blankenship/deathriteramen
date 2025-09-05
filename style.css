@@ -45,7 +45,8 @@ body {
 
 h1 {
 	font: 400 6em/1em "jacquard-12", sans-serif;
-	}
+	letter-spacing: -2px;
+}
 
 h2,
 h3 {
@@ -121,28 +122,19 @@ main {
 
 main p {
 	font: 1.15rem/1.6rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif;;
-	text-indent: 3.2rem;
 }
 
 main p:last-of-type { padding-bottom: 1.6rem; }
 
 main img { 
-	filter: grayscale(100%);
-	opacity: 50%;
 	width: 100%;
 	object-fit: cover; 
-}
-
-main img:hover {
-	filter: grayscale(0%);
-	opacity: 100%;
 }
 
 /* SCRUNCH */
 
 	@media (min-width: 2000px) and (max-width: 3000px) {
 
-		main,
 		section {
 			column-count: 4;
 			column-gap: 2rem;
