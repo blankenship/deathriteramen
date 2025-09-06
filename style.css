@@ -52,14 +52,14 @@ h3 {
 	}
 
 
-main a { 
+p a { 
 	border-bottom: 2px solid Chartreuse;
 	color: MediumSeaGreen;
 	font-weight: bold;
 	text-decoration: none;
 }
 
-main a:hover { 
+p a:hover { 
 	background: Chartreuse;
 }
 
@@ -77,20 +77,19 @@ footer h3:last-child {
 
 /*--BONES */
 
-footer,
-main {
+footer {
 	display: grid;
 	grid-template-columns: calc(50% - 1rem) calc(50% - 1rem);
 	grid-gap: 2rem;
 }
 
 section {
-	border-top: 4px solid black; 
-	border-bottom: 4px solid black; 
+	border-top: 2px solid black; 
+	border-bottom: 2px solid black; 
 }
 
 header {
-	border-bottom: 4px solid black; 
+	border-bottom: 2px solid black; 
 	margin: 0 auto;
 	padding: 0;
 	padding: 2rem 0 0;
@@ -111,19 +110,9 @@ img {
 	border-radius: 10px;
 }
 
-main {
-	padding: 4rem 0;
-}
-
-main p {
+p {
 	font: 1.15rem/1.6rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif;;
-}
-
-main p:last-of-type { padding-bottom: 1.6rem; }
-
-main img { 
-	width: 100%;
-	object-fit: cover; 
+	text-align: justify;
 }
 
 /* SCRUNCH */
