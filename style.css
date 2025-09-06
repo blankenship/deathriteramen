@@ -115,6 +115,8 @@ p {
 	text-align: justify;
 }
 
+div { margin-bottom: 2rem; }
+
 /* SCRUNCH */
 
 	@media (min-width: 2000px) and (max-width: 3000px) {
