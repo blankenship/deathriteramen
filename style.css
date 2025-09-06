@@ -44,11 +44,11 @@ body {
 /*--TYPOGRAPHY */
 
 h1 {
-	font: italic 400 10em/1em "fakir-new", sans-serif;
+	font: 400 7em/1em "fakir-display-condensed-new", sans-serif;
 }
 
 h3 {
-	font: 400 4em/1em "fakir-display-condensed-new", sans-serif;
+	font: italic 400 4em/1em "fakir-new", sans-serif;
 	}
 
 
