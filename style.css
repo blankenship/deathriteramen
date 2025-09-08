@@ -129,10 +129,6 @@ div { margin-bottom: 2rem; }
 			column-width: 50%;
 		}		
 
-		h1 { font: italic 400 7em/1em "fakir-new", sans-serif; }
-		h2 { font: 400 7em/1em "fakir-display-condensed-new", sans-serif; }
-		h3 { font: italic 400 4em/1em "fakir-new", sans-serif; }
-
 	}
 
 	@media (min-width: 1px) and (max-width: 800px) {
@@ -147,10 +143,6 @@ div { margin-bottom: 2rem; }
 			column-gap: 0;
 			column-width: 100%;
 		}
-
-		h1 { font: italic 400 7em/1em "fakir-new", sans-serif; }
-		h2 { font: 400 7em/1em "fakir-display-condensed-new", sans-serif; }
-		h3 { font: italic 400 4em/1em "fakir-new", sans-serif; }
 
 	}
 
