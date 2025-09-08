@@ -43,8 +43,8 @@ body {
 
 /*--TYPOGRAPHY */
 
-h1 { font: 400 10em/1em "lekick-brush", sans-serif; }
-h2 { font: italic 400 4em/1em "lekick-regular", sans-serif; }
+h1 { font: 400 8vw/1em "lekick-brush", sans-serif; }
+h2 { font: 2.5rem/2.5rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif; }
 
 
 p a { 
@@ -55,17 +55,16 @@ p a {
 }
 
 p a:hover { 
-	background: black;
+	border-bottom: 2px solid black;
 }
 
 h1 a,
-h3 a { 
+h2 a { 
 	color: black; 
 	text-decoration: none;
 }
 
-header h2,
-footer h3:last-child { 
+footer h2:last-child { 
 	text-align: right;
 }
 
@@ -104,7 +103,7 @@ img {
 }
 
 p {
-	font: 1.15rem/1.6rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif;;
+	font: 1.15rem/1.6rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif;
 	text-align: justify;
 }
 
