@@ -43,8 +43,11 @@ body {
 
 /*--TYPOGRAPHY */
 
-h1 { font: 400 8vw/1em "lekick-brush", sans-serif; }
-h2 { font: 2.5rem/2.5rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif; }
+h1 { font: 400 8vw/2em "lekick-brush", sans-serif; }
+h2 { 
+	font: 2.5rem/2.5rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif; 
+	text-transform: uppercase;
+}
 
 
 p a { 
@@ -143,6 +146,8 @@ div { margin-bottom: 2rem; }
 			column-gap: 0;
 			column-width: 100%;
 		}
+
+		h1 { font: 400 12vw/2em "lekick-brush", sans-serif; }
 
 	}
 
