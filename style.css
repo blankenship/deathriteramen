@@ -49,14 +49,14 @@ h3 { font: italic 400 4em/1em "fakir-new", sans-serif; }
 
 
 p a { 
-	border-bottom: 2px solid Chartreuse;
-	color: MediumSeaGreen;
+	border-bottom: 2px solid #afbf36;
+	color: #afbf36;
 	font-weight: bold;
 	text-decoration: none;
 }
 
 p a:hover { 
-	background: Chartreuse;
+	background: black;
 }
 
 h1 a,
@@ -131,11 +131,10 @@ div { margin-bottom: 2rem; }
 			column-width: 50%;
 		}		
 
-		h1,
-		h2,
-		h3 {
-			font: 900 7em/1em "dharma-gothic-c", sans-serif;
-	  	}
+		h1 { font: italic 400 7em/1em "fakir-new", sans-serif; }
+		h2 { font: 400 7em/1em "fakir-display-condensed-new", sans-serif; }
+		h3 { font: italic 400 4em/1em "fakir-new", sans-serif; }
+
 	}
 
 	@media (min-width: 1px) and (max-width: 800px) {
@@ -151,56 +150,10 @@ div { margin-bottom: 2rem; }
 			column-width: 100%;
 		}
 
+		h1 { font: italic 400 7em/1em "fakir-new", sans-serif; }
+		h2 { font: 400 7em/1em "fakir-display-condensed-new", sans-serif; }
+		h3 { font: italic 400 4em/1em "fakir-new", sans-serif; }
 
-		h1,
-		h2,
-		h3 {
-			font: 900 3.2em/1em "dharma-gothic-c", sans-serif;
-	  	}
 	}
 
-sup {
-	color: #999;
-	vertical-align: super;
-	text-transform: uppercase;
-	margin-left: .1rem;
-	font: bold .6rem/1.6rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif;;
-}
 
-/* LAZY LOAD */
-
-img[data-src] {
-    opacity: 0;
-    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-img.loaded {
-    opacity: 1;
-}
-
-.image-placeholder {
-    width: 100%;
-    height: 200px;
-    background: #e0e0e0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #999;
-    font-size: 14px;
-    margin-bottom: 2rem;
-}
-
-.loading {
-    animation: abracadabra 1.5s ease-in-out infinite;
-
-
-@keyframes abracadabra {
-    0%, 100% { 
-        opacity: 0.8; 
-        transform: scale(1);
-    }
-    50% { 
-        opacity: 0.4; 
-        transform: scale(1.01);
-    }
-}
