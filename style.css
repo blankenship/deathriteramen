@@ -43,12 +43,7 @@ body {
 
 /*--TYPOGRAPHY */
 
-h1 { 
-	font: 400 8vw/1em "lekick-brush", sans-serif; 
-  	color: transparent; /* Makes the text fill transparent */
-    -webkit-text-stroke: 1px black; 
-}
-
+h1 { font: 400 8vw/1em "lekick-brush", sans-serif; }
 h2 { 
 	font: 2.5rem/2.5rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif; 
 	text-transform: uppercase;
@@ -86,11 +81,7 @@ p a:hover {
 	color: black;
 }
 
-h1 a {
-	color: transparent; 
-	text-decoration: none;
-}
-
+h1 a,
 h2 a { 
 	color: black; 
 	text-decoration: none;
