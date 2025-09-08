@@ -49,11 +49,11 @@ h2 {
 	text-transform: uppercase;
 }
 
-header ul { margin-bottom: 2rem; }
+header ul { margin: 1rem auto 2rem; }
 
 header ul li { 
 	display: inline; 
-	font: 1.25rem/1.25rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif; 
+	font: 1rem/1rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif; 
 	margin: 0 .5rem; 
 	text-transform: uppercase;
 }
