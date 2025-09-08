@@ -127,6 +127,7 @@ img {
 
 p {
 	font: 1.15rem/1.6rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif;
+	margin-bottom: 1.6rem;
 	text-align: justify;
 }
 
