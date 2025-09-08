@@ -43,16 +43,30 @@ body {
 
 /*--TYPOGRAPHY */
 
-h1 { font: 400 8vw/2em "lekick-brush", sans-serif; }
+h1 { font: 400 8vw/1em "lekick-brush", sans-serif; }
 h2 { 
 	font: 2.5rem/2.5rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif; 
 	text-transform: uppercase;
 }
 
+header ul { margin-bottom: 2rem; }
+
 header ul li { 
 	display: inline; 
-	font: 1.5rem/1.5rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif; 
+	font: 1.25rem/1.25rem -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Open Sans", "Helvetica Neue", sans-serif; 
 	margin: 0 .5rem; 
+	text-transform: uppercase;
+}
+
+header ul li a { 
+	color: #afbf36;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+header ul li a:hover { 
+	border-bottom: 2px solid black;
+	color: black;
 }
 
 p a { 
