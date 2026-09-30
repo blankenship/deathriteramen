@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secret Lair Browser</title>
+<style>
+  :root {
+    --bg: #14121a; --panel: #1e1b27; --line: #2e2a3b; --text: #ece9f3; --muted: #9a94ad; --accent: #e0a64a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, sans-serif; }
+  header { position: sticky; top: 0; z-index: 10; background: rgba(20,18,26,.95); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  h1 { font-size: 18px; margin: 0 12px 0 0; }
+  nav button, .btn { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 6px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
+  nav button.active { border-color: var(--accent); color: var(--accent); }
+  input[type=search] { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 6px 10px; border-radius: 6px; min-width: 200px; flex: 1; max-width: 320px; font: inherit; }
+  #status { color: var(--muted); margin-left: auto; font-size: 13px; }
+  main { padding: 16px; max-width: 1600px; margin: 0 auto; }
+  .group { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; padding: 12px 14px; }
+  .group h2 { margin: 0 0 10px; font-size: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+  .group h2 .rank { color: var(--accent); }
+  .group h2 .meta { color: var(--muted); font-size: 13px; font-weight: normal; }
+  .grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .grid a { display: block; flex: 0 0 auto; }
+  .grid img { display: block; border-radius: 6px; background: #2a2636; }
+  .drop img { width: 146px; height: 204px; }
+  .thumb img { width: 73px; height: 102px; }
+  .thumb a:hover img, .drop a:hover img { outline: 2px solid var(--accent); }
+  .cap { font-size: 11px; color: var(--muted); width: 146px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thumb .cap { width: 73px; }
+  #error { color: #ff8a8a; padding: 16px; }
+  #more { text-align: center; padding: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Secret Lair Browser</h1>
+  <nav>
+    <button id="tab-drops" class="active">Drops by date</button>
+    <button id="tab-top">Most printed cards</button>
+  </nav>
+  <input id="q" type="search" placeholder="Filter by card name…">
+  <button class="btn" id="refresh" title="Discard cache and re-fetch from Scryfall">Refresh data</button>
+  <span id="status"></span>
+</header>
+<main>
+  <div id="error" hidden></div>
+  <div id="view"></div>
+  <div id="more" hidden><button class="btn" id="more-btn">Show more</button></div>
+</main>
+
+<script>
+const API = 'https://api.scryfall.com/cards/search?q=set%3Asld&unique=prints&order=released&dir=desc';
+const CACHE_KEY = 'sld-cache-v1';
+const CACHE_TTL = 24 * 3600 * 1000;
+const PAGE_SIZE = 25;
+
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let cards = [], tab = 'drops', shown = PAGE_SIZE, filter = '';
+
+function slim(c) {
+  const face = c.card_faces && !c.image_uris ? c.card_faces[0] : c;
+  const img = face.image_uris || {};
+  return {
+    n: c.name, d: c.released_at, cn: c.collector_number, u: c.scryfall_uri.replace('?utm_source=api', ''),
+    i: face.illustration_id || c.illustration_id || c.id,
+    s: img.small, m: img.normal,
+  };
+}
+
+function loadCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+    if (c && Date.now() - c.t < CACHE_TTL) return c.cards;
+  } catch (e) {}
+  return null;
+}
+function saveCache(list) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), cards: list })); } catch (e) {}
+}
+
+async function fetchAll() {
+  const out = [];
+  let url = API;
+  while (url) {
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error('Scryfall returned ' + res.status);
+    const j = await res.json();
+    j.data.forEach(c => out.push(slim(c)));
+    $('status').textContent = `Loading… ${out.length} / ${j.total_cards}`;
+    url = j.has_more ? j.next_page : null;
+    if (url) await sleep(100); // Scryfall rate-limit courtesy
+  }
+  return out;
+}
+
+async function load(force) {
+  $('error').hidden = true;
+  let list = force ? null : loadCache();
+  if (!list) {
+    $('view').innerHTML = '';
+    try { list = await fetchAll(); saveCache(list); }
+    catch (e) { $('error').textContent = 'Failed to load from Scryfall: ' + e.message; $('error').hidden = false; return; }
+  }
+  cards = list;
+  $('status').textContent = `${cards.length} Secret Lair printings`;
+  render();
+}
+
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function fmtDate(d) {
+  return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function dropsView() {
+  const f = filter.toLowerCase();
+  const byDate = new Map();
+  for (const c of cards) {
+    if (f && !c.n.toLowerCase().includes(f)) continue;
+    if (!byDate.has(c.d)) byDate.set(c.d, []);
+    byDate.get(c.d).push(c);
+  }
+  return [...byDate.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([date, list]) => {
+    list.sort((a, b) => a.cn.localeCompare(b.cn, undefined, { numeric: true }));
+    return { date, list };
+  });
+}
+
+function topView() {
+  const f = filter.toLowerCase();
+  const byName = new Map();
+  for (const c of cards) {
+    if (!byName.has(c.n)) byName.set(c.n, new Map());
+    const arts = byName.get(c.n);
+    const prev = arts.get(c.i);
+    if (!prev || c.d > prev.d) arts.set(c.i, c); // one thumbnail per unique illustration
+  }
+  return [...byName.entries()]
+    .map(([name, arts]) => ({ name, arts: [...arts.values()].sort((a, b) => b.d.localeCompare(a.d)) }))
+    .filter(g => g.arts.length >= 2 && (!f || g.name.toLowerCase().includes(f)))
+    .sort((a, b) => b.arts.length - a.arts.length || a.name.localeCompare(b.name));
+}
+
+function render() {
+  const view = $('view');
+  let html = '', total = 0;
+  if (tab === 'drops') {
+    const groups = dropsView();
+    total = groups.length;
+    html = groups.slice(0, shown).map(g => `
+      <section class="group drop">
+        <h2>${fmtDate(g.date)} <span class="meta">${g.list.length} card${g.list.length === 1 ? '' : 's'}</span></h2>
+        <div class="grid">${g.list.map(c => `
+          <div><a href="${c.u}" target="_blank" rel="noopener"><img loading="lazy" src="${c.m || c.s}" alt="${esc(c.n)}"></a>
+          <div class="cap" title="${esc(c.n)}">${esc(c.n)}</div></div>`).join('')}
+        </div>
+      </section>`).join('');
+  } else {
+    const groups = topView();
+    total = groups.length;
+    let rank = 0, lastCount = -1, pos = 0;
+    groups.forEach(g => { pos++; if (g.arts.length !== lastCount) { rank = pos; lastCount = g.arts.length; } g.rank = rank; });
+    html = groups.slice(0, shown).map(g => `
+      <section class="group thumb">
+        <h2><span class="rank">#${g.rank}</span> ${esc(g.name)} <span class="meta">${g.arts.length} different arts</span></h2>
+        <div class="grid">${g.arts.map(c => `
+          <a href="${c.u}" target="_blank" rel="noopener" title="${esc(c.n)} — ${fmtDate(c.d)}"><img loading="lazy" src="${c.s}" alt="${esc(c.n)}"></a>`).join('')}
+        </div>
+      </section>`).join('');
+  }
+  view.innerHTML = html || '<p style="color:var(--muted)">No results.</p>';
+  $('more').hidden = shown >= total;
+}
+
+function setTab(t) {
+  tab = t; shown = PAGE_SIZE;
+  $('tab-drops').classList.toggle('active', t === 'drops');
+  $('tab-top').classList.toggle('active', t === 'top');
+  render();
+}
+$('tab-drops').onclick = () => setTab('drops');
+$('tab-top').onclick = () => setTab('top');
+$('more-btn').onclick = () => { shown += PAGE_SIZE; render(); };
+$('refresh').onclick = () => { shown = PAGE_SIZE; load(true); };
+let t;
+$('q').oninput = e => { clearTimeout(t); t = setTimeout(() => { filter = e.target.value.trim(); shown = PAGE_SIZE; render(); }, 200); };
+
+load();
+</script>
+</body>
+</html>

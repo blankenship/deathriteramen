@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(open /Users/blankenship/Documents/Vibes/Preamble/Preamble.app)"
+    ]
+  }
+}
