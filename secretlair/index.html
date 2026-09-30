@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Secret Lair Browser</title>
+<title>Deathrite Ramen’s Secret Lair Dashboard</title>
 <style>
   :root {
     --bg: #14121a; --panel: #1e1b27; --line: #2e2a3b; --text: #ece9f3; --muted: #9a94ad; --accent: #e0a64a;
@@ -30,21 +30,27 @@
   .cap { font-size: 11px; color: var(--muted); width: 146px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .thumb .cap { width: 73px; }
   #error { color: #ff8a8a; padding: 16px; }
+  #summary { margin-bottom: 16px; color: var(--muted); line-height: 2; }
+  #summary .total { color: var(--text); font-weight: 600; margin-right: 8px; }
+  #summary a { color: var(--accent); cursor: pointer; white-space: nowrap; }
+  #summary a:hover { text-decoration: underline; }
+  .group { scroll-margin-top: 80px; }
   #more { text-align: center; padding: 16px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Secret Lair Browser</h1>
+  <h1>Deathrite Ramen’s Secret Lair Dashboard</h1>
   <nav>
-    <button id="tab-drops" class="active">Drops by date</button>
-    <button id="tab-top">Most printed cards</button>
+    <button id="tab-top" class="active">Most printed cards</button>
+    <button id="tab-drops">Drops by date</button>
   </nav>
   <input id="q" type="search" placeholder="Filter by card name…">
   <button class="btn" id="refresh" title="Discard cache and re-fetch from Scryfall">Refresh data</button>
   <span id="status"></span>
 </header>
 <main>
+  <div id="summary"></div>
   <div id="error" hidden></div>
   <div id="view"></div>
   <div id="more" hidden><button class="btn" id="more-btn">Show more</button></div>
@@ -58,7 +64,7 @@ const PAGE_SIZE = 25;
 
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-let cards = [], tab = 'drops', shown = PAGE_SIZE, filter = '';
+let cards = [], tab = 'top', shown = PAGE_SIZE, filter = '';
 
 function slim(c) {
   const face = c.card_faces && !c.image_uris ? c.card_faces[0] : c;
@@ -105,7 +111,7 @@ async function load(force) {
     catch (e) { $('error').textContent = 'Failed to load from Scryfall: ' + e.message; $('error').hidden = false; return; }
   }
   cards = list;
-  $('status').textContent = `${cards.length} Secret Lair printings`;
+  $('status').textContent = '';
   render();
 }
 
@@ -140,39 +146,68 @@ function topView() {
   }
   return [...byName.entries()]
     .map(([name, arts]) => ({ name, arts: [...arts.values()].sort((a, b) => b.d.localeCompare(a.d)) }))
-    .filter(g => g.arts.length >= 2 && (!f || g.name.toLowerCase().includes(f)))
+    .filter(g => !f || g.name.toLowerCase().includes(f))
     .sort((a, b) => b.arts.length - a.arts.length || a.name.localeCompare(b.name));
 }
 
+function dropHtml(g) {
+  return `
+    <section class="group drop">
+      <h2>${fmtDate(g.date)} <span class="meta">${g.list.length} card${g.list.length === 1 ? '' : 's'}</span></h2>
+      <div class="grid">${g.list.map(c => `
+        <div><a href="${c.u}" target="_blank" rel="noopener"><img loading="lazy" src="${c.m || c.s}" alt="${esc(c.n)}"></a>
+        <div class="cap" title="${esc(c.n)}">${esc(c.n)}</div></div>`).join('')}
+      </div>
+    </section>`;
+}
+
+function topHtml(g, i) {
+  const n = g.arts.length;
+  return `
+    <section class="group thumb" data-count="${n}">
+      <h2>${filter ? '' : `<span class="rank">#${i + 1}</span> `}${esc(g.name)} <span class="meta">${n === 1 ? '1 art' : n + ' different arts'}</span></h2>
+      <div class="grid">${g.arts.map(c => `
+        <a href="${c.u}" target="_blank" rel="noopener" title="${esc(c.n)} — ${fmtDate(c.d)}"><img loading="lazy" src="${c.s}" alt="${esc(c.n)}"></a>`).join('')}
+      </div>
+    </section>`;
+}
+
+let groups = [], rendered = 0;
+
+// Append groups [rendered, upto) without touching existing DOM (keeps loaded images).
+function extend(upto) {
+  upto = Math.min(upto, groups.length);
+  const fn = tab === 'drops' ? dropHtml : topHtml;
+  $('view').insertAdjacentHTML('beforeend', groups.slice(rendered, upto).map((g, k) => fn(g, rendered + k)).join(''));
+  rendered = upto;
+  shown = upto;
+  $('more').hidden = rendered >= groups.length;
+}
+
+function renderSummary() {
+  const total = `<span class="total">${cards.length} total Secret Lair printings (so far)</span>`;
+  if (tab !== 'top') { $('summary').innerHTML = total; return; }
+  const counts = new Map();
+  groups.forEach(g => counts.set(g.arts.length, (counts.get(g.arts.length) || 0) + 1));
+  const chips = [...counts.entries()].sort((a, b) => b[0] - a[0])
+    .map(([n, k]) => `<a data-count="${n}">${n} (${k})</a>`);
+  $('summary').innerHTML = total + chips.join(' / ');
+}
+
+function jumpTo(n) {
+  const idx = groups.findIndex(g => g.arts.length === n);
+  if (idx < 0) return;
+  if (idx >= rendered) extend(idx + PAGE_SIZE);
+  $('view').querySelector(`.group[data-count="${n}"]`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function render() {
-  const view = $('view');
-  let html = '', total = 0;
-  if (tab === 'drops') {
-    const groups = dropsView();
-    total = groups.length;
-    html = groups.slice(0, shown).map(g => `
-      <section class="group drop">
-        <h2>${fmtDate(g.date)} <span class="meta">${g.list.length} card${g.list.length === 1 ? '' : 's'}</span></h2>
-        <div class="grid">${g.list.map(c => `
-          <div><a href="${c.u}" target="_blank" rel="noopener"><img loading="lazy" src="${c.m || c.s}" alt="${esc(c.n)}"></a>
-          <div class="cap" title="${esc(c.n)}">${esc(c.n)}</div></div>`).join('')}
-        </div>
-      </section>`).join('');
-  } else {
-    const groups = topView();
-    total = groups.length;
-    let rank = 0, lastCount = -1, pos = 0;
-    groups.forEach(g => { pos++; if (g.arts.length !== lastCount) { rank = pos; lastCount = g.arts.length; } g.rank = rank; });
-    html = groups.slice(0, shown).map(g => `
-      <section class="group thumb">
-        <h2><span class="rank">#${g.rank}</span> ${esc(g.name)} <span class="meta">${g.arts.length} different arts</span></h2>
-        <div class="grid">${g.arts.map(c => `
-          <a href="${c.u}" target="_blank" rel="noopener" title="${esc(c.n)} — ${fmtDate(c.d)}"><img loading="lazy" src="${c.s}" alt="${esc(c.n)}"></a>`).join('')}
-        </div>
-      </section>`).join('');
-  }
-  view.innerHTML = html || '<p style="color:var(--muted)">No results.</p>';
-  $('more').hidden = shown >= total;
+  groups = tab === 'drops' ? dropsView() : topView();
+  $('view').innerHTML = '';
+  rendered = 0;
+  extend(shown);
+  if (!groups.length) $('view').innerHTML = '<p style="color:var(--muted)">No results.</p>';
+  renderSummary();
 }
 
 function setTab(t) {
@@ -181,9 +216,10 @@ function setTab(t) {
   $('tab-top').classList.toggle('active', t === 'top');
   render();
 }
+$('summary').onclick = e => { const a = e.target.closest('a[data-count]'); if (a) jumpTo(+a.dataset.count); };
 $('tab-drops').onclick = () => setTab('drops');
 $('tab-top').onclick = () => setTab('top');
-$('more-btn').onclick = () => { shown += PAGE_SIZE; render(); };
+$('more-btn').onclick = () => extend(rendered + PAGE_SIZE);
 $('refresh').onclick = () => { shown = PAGE_SIZE; load(true); };
 let t;
 $('q').oninput = e => { clearTimeout(t); t = setTimeout(() => { filter = e.target.value.trim(); shown = PAGE_SIZE; render(); }, 200); };
