@@ -62,8 +62,8 @@
 </main>
 
 <script>
-const API = 'https://api.scryfall.com/cards/search?q=set%3Asld&unique=prints&order=released&dir=desc';
-const CACHE_KEY = 'sld-cache-v1';
+const API = 'https://api.scryfall.com/cards/search?q=set%3Asld&unique=prints&order=set&dir=asc';
+const CACHE_KEY = 'sld-cache-v2';
 const CACHE_TTL = 24 * 3600 * 1000;
 const PAGE_SIZE = 25;
 
@@ -76,7 +76,7 @@ function slim(c) {
   const face = c.card_faces && !c.image_uris ? c.card_faces[0] : c;
   const img = face.image_uris || {};
   return {
-    n: c.name, d: c.released_at, cn: c.collector_number, u: c.scryfall_uri.replace('?utm_source=api', ''),
+    id: c.id, n: c.name, d: c.released_at, cn: c.collector_number, u: c.scryfall_uri.replace('?utm_source=api', ''),
     i: face.illustration_id || c.illustration_id || c.id,
     s: img.small, m: img.normal,
   };
@@ -94,13 +94,13 @@ function saveCache(list) {
 }
 
 async function fetchAll() {
-  const out = [];
+  const out = [], seen = new Set();
   let url = API;
   while (url) {
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!res.ok) throw new Error('Scryfall returned ' + res.status);
     const j = await res.json();
-    j.data.forEach(c => out.push(slim(c)));
+    j.data.forEach(c => { if (!seen.has(c.id)) { seen.add(c.id); out.push(slim(c)); } });
     $('status').textContent = `Loading… ${out.length} / ${j.total_cards}`;
     url = j.has_more ? j.next_page : null;
     if (url) await sleep(100); // Scryfall rate-limit courtesy
@@ -143,15 +143,16 @@ function dropsView() {
 
 function topView() {
   const f = filter.toLowerCase();
-  const byName = new Map();
+  const byName = new Map(), prints = new Map();
   for (const c of cards) {
+    prints.set(c.n, (prints.get(c.n) || 0) + 1);
     if (!byName.has(c.n)) byName.set(c.n, new Map());
     const arts = byName.get(c.n);
     const prev = arts.get(c.i);
     if (!prev || c.d > prev.d) arts.set(c.i, c); // one thumbnail per unique illustration
   }
   return [...byName.entries()]
-    .map(([name, arts]) => ({ name, arts: [...arts.values()].sort((a, b) => b.d.localeCompare(a.d)) }))
+    .map(([name, arts]) => ({ name, prints: prints.get(name), arts: [...arts.values()].sort((a, b) => b.d.localeCompare(a.d)) }))
     .filter(g => !f || g.name.toLowerCase().includes(f))
     .sort((a, b) => b.arts.length - a.arts.length || a.name.localeCompare(b.name));
 }
@@ -190,7 +191,7 @@ function extend(upto) {
 
 function renderSummary() {
   const distinct = new Set(cards.map(c => c.n + '|' + c.i)).size;
-  if (tab !== 'top') { $('summary').innerHTML = `<p class="intro">There have been ${cards.length} total Secret Lair printings (so far) with ${distinct} distinct pieces of art on them.</p>`; return; }
+  if (tab !== 'top') { $('summary').innerHTML = `<p class="intro">There have been ${cards.length} total Secret Lair cards (so far) with ${distinct} distinct pieces of art on them.</p>`; return; }
   const counts = new Map();
   groups.forEach(g => counts.set(g.arts.length, (counts.get(g.arts.length) || 0) + 1));
   const rows = [...counts.entries()].sort((a, b) => b[0] - a[0]);
@@ -201,7 +202,8 @@ function renderSummary() {
   ].filter(b => b.rows.length);
   buckets.forEach(b => {
     b.cards = b.rows.reduce((a, [, k]) => a + k, 0);
-    b.arts = b.rows.reduce((a, [n, k]) => a + n * k, 0);
+    const ns = new Set(b.rows.map(([n]) => n));
+    b.prints = groups.filter(g => ns.has(g.arts.length)).reduce((a, g) => a + g.prints, 0);
   });
   // Whole-number percents; largest-remainder so each column sums to exactly 100%.
   const share = key => {
@@ -212,20 +214,18 @@ function renderSummary() {
       .slice(0, left).forEach(([i]) => out[i]++);
     return out;
   };
-  const pctArts = share('arts');
+  const pct = share('prints');
   const words = { 1: 'one', 2: 'two', 3: 'three' };
   const last = buckets.length - 1;
   const phrase = (b, i) => {
-    const p = `<b>${pctArts[i]}%</b>`;
+    const p = `<b>${pct[i]}%</b>`;
     const is4 = b.label.includes('4 or more'), n = b.rows[0][0];
-    const what = is4 ? 'four or more different treatments' : words[n];
-    if (i === 0) return `${p} of all Secret Lair cards have had ${what}${is4 ? '' : ' different treatment' + (n === 1 ? '' : 's')}`;
-    const tail = n === 1 ? 'only had one unique art treatment' : `had ${what}`;
-    return `${i === last ? 'and ' : ''}${p} have ${n === 1 ? tail : 'had ' + what}`;
+    if (i === 0) return `${p} of card choices have ${is4 ? 'four or more' : words[n]} distinct art treatment${!is4 && n === 1 ? '' : 's'}`;
+    return `${i === last ? 'and ' : ''}${p} ${n === 1 ? 'only have one' : 'have ' + words[n]}`;
   };
   const sentence = buckets.map(phrase).join(', ');
   const pills = rows.map(([n, k]) => `<a class="pill" data-count="${n}">${n} art${n === 1 ? '' : 's'} (${k} card${k === 1 ? '' : 's'})</a>`).join('');
-  $('summary').innerHTML = `<p class="intro">There have been ${cards.length} total Secret Lair printings (so far) with ${distinct} distinct pieces of art on them. ${sentence}.</p>`
+  $('summary').innerHTML = `<p class="intro">There have been ${cards.length} total Secret Lair cards (so far) with ${distinct} distinct pieces of art on them. ${sentence}.</p>`
     + `<a id="details-toggle" href="#">${detailsOpen ? 'Hide the breakdown' : 'See the breakdown'}</a>`
     + `<div class="pills" ${detailsOpen ? '' : 'hidden'}>${pills}</div>`;
 }
