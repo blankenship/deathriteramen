@@ -30,16 +30,13 @@
   .cap { font-size: 11px; color: var(--muted); width: 146px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #error { color: #ff8a8a; padding: 16px; }
   #summary { margin-bottom: 16px; color: var(--muted); }
-  #summary .total { display: block; margin-bottom: 8px; color: var(--text); font-weight: 600; }
-  #summary .sub { color: var(--muted); font-weight: normal; }
   .intro { color: var(--text); margin: 0 0 12px; max-width: 900px; line-height: 1.5; }
   .intro b { color: var(--accent); }
-  #details-toggle { color: var(--accent); cursor: pointer; font-size: 13px; }
-  #details-toggle:hover { text-decoration: underline; }
-  .pills[hidden] { display: none; }
-  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; font-size: 12px; line-height: 1.6; color: var(--text); cursor: pointer; white-space: nowrap; }
+  #filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 16px; }
+  #filters .sep { width: 1px; height: 18px; background: var(--line); margin: 0 6px; }
+  .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; font: inherit; font-size: 12px; line-height: 1.6; color: var(--text); cursor: pointer; white-space: nowrap; }
   .pill:hover { border-color: var(--accent); }
+  .pill[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: rgba(224,166,74,.12); }
   footer { max-width: 1600px; margin: 0 auto; padding: 8px 16px 32px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
   footer p { margin: 8px 0; max-width: 900px; }
   footer a { color: var(--accent); text-decoration: none; }
@@ -60,6 +57,7 @@
 </header>
 <main>
   <div id="summary"></div>
+  <div id="filters"></div>
   <div id="error" hidden></div>
   <div id="view"></div>
   <div id="more" hidden><button class="btn" id="more-btn">Show more</button></div>
@@ -79,7 +77,31 @@ const REFRESH_COOLDOWN_MS = 60 * 1000;
 
 const $ = id => document.getElementById(id);
 let cards = [], tab = 'top', shown = PAGE_SIZE, filter = '';
-let groups = [], rendered = 0, detailsOpen = false;
+let groups = [], rendered = 0, introHtml = '';
+let excludeBasics = false;
+const activeTypes = new Set();
+
+// Card-type filters, matched against Scryfall's type_line. Tokens only match the Tokens pill.
+const isToken = c => /\bToken\b/.test(c.t);
+const isBasic = c => /\bBasic\b/.test(c.t);
+const typeTest = word => c => !isToken(c) && new RegExp('\\b' + word + '\\b').test(c.t);
+const TYPE_FILTERS = [
+  ['Creatures', typeTest('Creature')],
+  ['Artifacts', typeTest('Artifact')],
+  ['Enchantments', typeTest('Enchantment')],
+  ['Planeswalkers', typeTest('Planeswalker')],
+  ['Instants', typeTest('Instant')],
+  ['Sorceries', typeTest('Sorcery')],
+  ['Basic Lands', c => !isToken(c) && isBasic(c) && /\bLand\b/.test(c.t)],
+  ['Lands', typeTest('Land')],
+  ['Tokens', isToken],
+];
+
+// Cards that pass the basics toggle and the type pills (any selected type matches).
+function visibleCards() {
+  const tests = TYPE_FILTERS.filter(([name]) => activeTypes.has(name)).map(([, fn]) => fn);
+  return cards.filter(c => !(excludeBasics && isBasic(c)) && (!tests.length || tests.some(fn => fn(c))));
+}
 
 async function load(force) {
   $('error').hidden = true;
@@ -96,6 +118,7 @@ async function load(force) {
     $('error').hidden = false;
     return;
   }
+  renderFilters(); syncFilters();
   render();
 }
 
@@ -108,7 +131,7 @@ function fmtDate(d) {
 function dropsView() {
   const f = filter.toLowerCase();
   const byDate = new Map();
-  for (const c of cards) {
+  for (const c of visibleCards()) {
     if (f && !c.n.toLowerCase().includes(f)) continue;
     if (!byDate.has(c.d)) byDate.set(c.d, []);
     byDate.get(c.d).push(c);
@@ -119,10 +142,9 @@ function dropsView() {
   });
 }
 
-function topView() {
-  const f = filter.toLowerCase();
+function groupByName(list) {
   const byName = new Map(), prints = new Map();
-  for (const c of cards) {
+  for (const c of list) {
     prints.set(c.n, (prints.get(c.n) || 0) + 1);
     if (!byName.has(c.n)) byName.set(c.n, new Map());
     const arts = byName.get(c.n);
@@ -130,7 +152,12 @@ function topView() {
     if (!prev || c.d > prev.d) arts.set(c.i, c); // one thumbnail per unique illustration
   }
   return [...byName.entries()]
-    .map(([name, arts]) => ({ name, prints: prints.get(name), arts: [...arts.values()].sort((a, b) => b.d.localeCompare(a.d)) }))
+    .map(([name, arts]) => ({ name, prints: prints.get(name), arts: [...arts.values()].sort((a, b) => b.d.localeCompare(a.d)) }));
+}
+
+function topView() {
+  const f = filter.toLowerCase();
+  return groupByName(visibleCards())
     .filter(g => !f || g.name.toLowerCase().includes(f))
     .sort((a, b) => b.arts.length - a.arts.length || a.name.localeCompare(b.name));
 }
@@ -167,53 +194,55 @@ function extend(upto) {
   $('more').hidden = rendered >= groups.length;
 }
 
-function renderSummary() {
+// Intro stats are always global (all cards, no filters).
+function buildIntro() {
   const distinct = new Set(cards.map(c => c.n + '|' + c.i)).size;
-  if (tab !== 'top') { $('summary').innerHTML = `<p class="intro">There have been ${cards.length} total Secret Lair cards (so far) with ${distinct} distinct pieces of art on them.</p>`; return; }
-  const counts = new Map();
-  groups.forEach(g => counts.set(g.arts.length, (counts.get(g.arts.length) || 0) + 1));
-  const rows = [...counts.entries()].sort((a, b) => b[0] - a[0]);
-  // Buckets: 4+ arts together, then 3, 2, 1 (biggest count first).
+  const first = `There have been ${cards.length} total Secret Lair cards (so far) with ${distinct} distinct pieces of art on them.`;
+  const all = groupByName(cards);
+  // Buckets: 4+ arts together, then 3, 2, 1 (biggest count first); weighted by card printings.
   const buckets = [
-    { label: 'Cards with 4 or more arts', rows: rows.filter(([n]) => n >= 4) },
-    ...[3, 2, 1].map(n => ({ label: `Cards with ${n} art${n === 1 ? '' : 's'}`, rows: rows.filter(([m]) => m === n) })),
-  ].filter(b => b.rows.length);
-  buckets.forEach(b => {
-    b.cards = b.rows.reduce((a, [, k]) => a + k, 0);
-    const ns = new Set(b.rows.map(([n]) => n));
-    b.prints = groups.filter(g => ns.has(g.arts.length)).reduce((a, g) => a + g.prints, 0);
-  });
-  // Whole-number percents; largest-remainder so each column sums to exactly 100%.
-  const share = key => {
-    const base = buckets.reduce((a, b) => a + b[key], 0);
-    const out = buckets.map(b => Math.floor(b[key] * 100 / base));
-    let left = base ? 100 - out.reduce((a, b) => a + b, 0) : 0;
-    buckets.map((b, i) => [i, (b[key] * 100 / base) % 1]).sort((a, b) => b[1] - a[1])
-      .slice(0, left).forEach(([i]) => out[i]++);
-    return out;
-  };
-  const pct = share('prints');
+    { n: 4, test: n => n >= 4 }, { n: 3, test: n => n === 3 }, { n: 2, test: n => n === 2 }, { n: 1, test: n => n === 1 },
+  ].map(b => ({ ...b, prints: all.filter(g => b.test(g.arts.length)).reduce((a, g) => a + g.prints, 0) }))
+    .filter(b => b.prints);
+  // Whole-number percents; largest-remainder so they sum to exactly 100%.
+  const base = buckets.reduce((a, b) => a + b.prints, 0);
+  const pct = buckets.map(b => Math.floor(b.prints * 100 / base));
+  const left = 100 - pct.reduce((a, b) => a + b, 0);
+  buckets.map((b, i) => [i, (b.prints * 100 / base) % 1]).sort((a, b) => b[1] - a[1])
+    .slice(0, left).forEach(([i]) => pct[i]++);
   const words = { 1: 'one', 2: 'two', 3: 'three' };
   const last = buckets.length - 1;
-  const phrase = (b, i) => {
+  const sentence = buckets.map((b, i) => {
     const p = `<b>${pct[i]}%</b>`;
-    const is4 = b.label.includes('4 or more'), n = b.rows[0][0];
-    if (i === 0) return `${p} of card choices have ${is4 ? 'four or more' : words[n]} distinct art treatment${!is4 && n === 1 ? '' : 's'}`;
-    return `${i === last ? 'and ' : ''}${p} ${n === 1 ? 'only have one' : 'have ' + words[n]}`;
-  };
-  const sentence = buckets.map(phrase).join(', ');
-  const pills = rows.map(([n, k]) => `<a class="pill" data-count="${n}">${n} art${n === 1 ? '' : 's'} (${k} card${k === 1 ? '' : 's'})</a>`).join('');
-  $('summary').innerHTML = `<p class="intro">There have been ${cards.length} total Secret Lair cards (so far) with ${distinct} distinct pieces of art on them. ${sentence}.</p>`
-    + `<a id="details-toggle" href="#">${detailsOpen ? 'Hide the breakdown' : 'See the breakdown'}</a>`
-    + `<div class="pills" ${detailsOpen ? '' : 'hidden'}>${pills}</div>`;
+    if (i === 0) return `${p} of card choices have ${b.n === 4 ? 'four or more' : words[b.n]} distinct art treatment${b.n === 1 ? '' : 's'}`;
+    return `${i === last ? 'and ' : ''}${p} ${b.n === 1 ? 'only have one' : 'have ' + words[b.n]}`;
+  }).join(', ');
+  return { first, full: `${first} ${sentence}.` };
 }
 
-function jumpTo(n) {
-  const idx = groups.findIndex(g => g.arts.length === n);
-  if (idx < 0) return;
-  if (idx >= rendered) extend(idx + PAGE_SIZE);
-  $('view').querySelector(`.group[data-count="${n}"]`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+function renderSummary() {
+  const intro = buildIntro();
+  $('summary').innerHTML = `<p class="intro">${tab === 'top' ? intro.full : intro.first}</p>`;
 }
+
+function renderFilters() {
+  const pill = (label, key) => `<button class="pill" data-filter="${key}" aria-pressed="false">${label}</button>`;
+  $('filters').innerHTML = pill('Exclude Basic Lands', '__basics') + '<span class="sep"></span>'
+    + TYPE_FILTERS.map(([name]) => pill(name, name)).join('');
+}
+function syncFilters() {
+  $('filters').querySelectorAll('.pill').forEach(b => {
+    const k = b.dataset.filter;
+    b.setAttribute('aria-pressed', String(k === '__basics' ? excludeBasics : activeTypes.has(k)));
+  });
+}
+$('filters').onclick = e => {
+  const b = e.target.closest('.pill'); if (!b) return;
+  const k = b.dataset.filter;
+  if (k === '__basics') excludeBasics = !excludeBasics;
+  else activeTypes.has(k) ? activeTypes.delete(k) : activeTypes.add(k);
+  syncFilters(); shown = PAGE_SIZE; render();
+};
 
 function render() {
   groups = tab === 'drops' ? dropsView() : topView();
@@ -230,8 +259,6 @@ function setTab(t) {
   $('tab-top').classList.toggle('active', t === 'top');
   render();
 }
-$('summary').onclick = e => {
-  if (e.target.id === 'details-toggle') { e.preventDefault(); detailsOpen = !detailsOpen; renderSummary(); return; } const a = e.target.closest('a[data-count]'); if (a) jumpTo(+a.dataset.count); };
 $('tab-drops').onclick = () => setTab('drops');
 $('tab-top').onclick = () => setTab('top');
 $('more-btn').onclick = () => extend(rendered + PAGE_SIZE);

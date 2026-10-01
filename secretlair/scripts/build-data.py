@@ -24,6 +24,7 @@ def slim(c):
         "id": c["id"], "n": c["name"], "d": c["released_at"], "cn": c["collector_number"],
         "u": c["scryfall_uri"].split("?")[0],
         "i": face.get("illustration_id") or c.get("illustration_id") or c["id"],
+        "t": c.get("type_line") or " // ".join(f.get("type_line", "") for f in c.get("card_faces", [])),
         "s": img.get("small"), "m": img.get("normal"),
     }
 
