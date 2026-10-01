@@ -17,7 +17,7 @@
   input[type=search] { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 6px 10px; border-radius: 6px; min-width: 200px; flex: 1; max-width: 320px; font: inherit; }
   #status { color: var(--muted); margin-left: auto; font-size: 13px; }
   main { padding: 16px; max-width: 1600px; margin: 0 auto; }
-  .group { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; padding: 12px 14px; }
+  .group { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; padding: 12px 14px; scroll-margin-top: 80px; }
   .group h2 { margin: 0 0 10px; font-size: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
   .group h2 .rank { color: var(--accent); }
   .group h2 .meta { color: var(--muted); font-size: 13px; font-weight: normal; }
@@ -28,13 +28,14 @@
   .thumb img { width: 73px; height: 102px; }
   .thumb a:hover img, .drop a:hover img { outline: 2px solid var(--accent); }
   .cap { font-size: 11px; color: var(--muted); width: 146px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .thumb .cap { width: 73px; }
   #error { color: #ff8a8a; padding: 16px; }
-  #summary { margin-bottom: 16px; color: var(--muted); line-height: 2; }
-  #summary .total { color: var(--text); font-weight: 600; margin-right: 8px; }
-  #summary a { color: var(--accent); cursor: pointer; white-space: nowrap; }
-  #summary a:hover { text-decoration: underline; }
-  .group { scroll-margin-top: 80px; }
+  #summary { margin-bottom: 16px; color: var(--muted); }
+  #summary .total { display: block; margin-bottom: 8px; color: var(--text); font-weight: 600; }
+  #summary .sub { color: var(--muted); font-weight: normal; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; font-size: 12px; line-height: 1.6; color: var(--text); cursor: pointer; white-space: nowrap; }
+  .pill b { color: var(--accent); font-weight: 600; margin-left: 4px; }
+  .pill:hover { border-color: var(--accent); }
   #more { text-align: center; padding: 16px; }
 </style>
 </head>
@@ -65,6 +66,7 @@ const PAGE_SIZE = 25;
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let cards = [], tab = 'top', shown = PAGE_SIZE, filter = '';
+let groups = [], rendered = 0;
 
 function slim(c) {
   const face = c.card_faces && !c.image_uris ? c.card_faces[0] : c;
@@ -172,8 +174,6 @@ function topHtml(g, i) {
     </section>`;
 }
 
-let groups = [], rendered = 0;
-
 // Append groups [rendered, upto) without touching existing DOM (keeps loaded images).
 function extend(upto) {
   upto = Math.min(upto, groups.length);
@@ -185,13 +185,23 @@ function extend(upto) {
 }
 
 function renderSummary() {
-  const total = `<span class="total">${cards.length} total Secret Lair printings (so far)</span>`;
+  const distinct = new Set(cards.map(c => c.n + '|' + c.i)).size;
+  const total = `<span class="total">${distinct} distinct card arts <span class="sub">· ${cards.length} total Secret Lair printings (so far)</span></span>`;
   if (tab !== 'top') { $('summary').innerHTML = total; return; }
   const counts = new Map();
   groups.forEach(g => counts.set(g.arts.length, (counts.get(g.arts.length) || 0) + 1));
-  const chips = [...counts.entries()].sort((a, b) => b[0] - a[0])
-    .map(([n, k]) => `<a data-count="${n}">${n} (${k})</a>`);
-  $('summary').innerHTML = total + chips.join(' / ');
+  const rows = [...counts.entries()].sort((a, b) => b[0] - a[0]);
+  // Percent of cards, whole numbers; largest-remainder so the pills sum to exactly 100%.
+  const base = groups.length;
+  const pct = rows.map(([, k]) => Math.floor(k * 100 / base));
+  if (base) {
+    const left = 100 - pct.reduce((a, b) => a + b, 0);
+    rows.map(([, k], i) => [i, (k * 100 / base) % 1]).sort((a, b) => b[1] - a[1])
+      .slice(0, left).forEach(([i]) => pct[i]++);
+  }
+  const chips = rows.map(([n, k], i) =>
+    `<a class="pill" data-count="${n}">${n} art${n === 1 ? '' : 's'} (${k} card${k === 1 ? '' : 's'}) <b>${pct[i]}%</b></a>`);
+  $('summary').innerHTML = total + `<div class="pills">${chips.join('')}</div>`;
 }
 
 function jumpTo(n) {
