@@ -40,6 +40,10 @@
   .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; font-size: 12px; line-height: 1.6; color: var(--text); cursor: pointer; white-space: nowrap; }
   .pill:hover { border-color: var(--accent); }
+  footer { max-width: 1600px; margin: 0 auto; padding: 8px 16px 32px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
+  footer p { margin: 8px 0; max-width: 900px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
   #more { text-align: center; padding: 16px; }
 </style>
 </head>
@@ -51,7 +55,7 @@
     <button id="tab-drops">Drops by date</button>
   </nav>
   <input id="q" type="search" placeholder="Filter by card name…">
-  <button class="btn" id="refresh" title="Discard cache and re-fetch from Scryfall">Refresh data</button>
+  <button class="btn" id="refresh" title="Reload the latest data">Refresh data</button>
   <span id="status"></span>
 </header>
 <main>
@@ -60,64 +64,38 @@
   <div id="view"></div>
   <div id="more" hidden><button class="btn" id="more-btn">Show more</button></div>
 </main>
+<footer>
+  <p>Card data and images courtesy of <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>. This is an unofficial fan project and is not produced by, affiliated with, or endorsed by Scryfall or Wizards of the Coast. Magic: The Gathering is © Wizards of the Coast.<span id="data-updated"></span></p>
+  <p>Find me on
+    <a href="https://instagram.com/deathritera.men" target="_blank" rel="noopener">Instagram</a> ·
+    <a href="https://twitter.com/deathriteramen" target="_blank" rel="noopener">Twitter</a> ·
+    <a href="https://moxfield.com/users/deathriteramen" target="_blank" rel="noopener">Moxfield</a></p>
+</footer>
 
 <script>
-const API = 'https://api.scryfall.com/cards/search?q=set%3Asld&unique=prints&order=set&dir=asc';
-const CACHE_KEY = 'sld-cache-v2';
-const CACHE_TTL = 24 * 3600 * 1000;
+const DATA_URL = 'data.json'; // built daily from Scryfall bulk data by scripts/build-data.py
 const PAGE_SIZE = 25;
+const REFRESH_COOLDOWN_MS = 60 * 1000;
 
 const $ = id => document.getElementById(id);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 let cards = [], tab = 'top', shown = PAGE_SIZE, filter = '';
 let groups = [], rendered = 0, detailsOpen = false;
 
-function slim(c) {
-  const face = c.card_faces && !c.image_uris ? c.card_faces[0] : c;
-  const img = face.image_uris || {};
-  return {
-    id: c.id, n: c.name, d: c.released_at, cn: c.collector_number, u: c.scryfall_uri.replace('?utm_source=api', ''),
-    i: face.illustration_id || c.illustration_id || c.id,
-    s: img.small, m: img.normal,
-  };
-}
-
-function loadCache() {
-  try {
-    const c = JSON.parse(localStorage.getItem(CACHE_KEY));
-    if (c && Date.now() - c.t < CACHE_TTL) return c.cards;
-  } catch (e) {}
-  return null;
-}
-function saveCache(list) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), cards: list })); } catch (e) {}
-}
-
-async function fetchAll() {
-  const out = [], seen = new Set();
-  let url = API;
-  while (url) {
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error('Scryfall returned ' + res.status);
-    const j = await res.json();
-    j.data.forEach(c => { if (!seen.has(c.id)) { seen.add(c.id); out.push(slim(c)); } });
-    $('status').textContent = `Loading… ${out.length} / ${j.total_cards}`;
-    url = j.has_more ? j.next_page : null;
-    if (url) await sleep(100); // Scryfall rate-limit courtesy
-  }
-  return out;
-}
-
 async function load(force) {
   $('error').hidden = true;
-  let list = force ? null : loadCache();
-  if (!list) {
-    $('view').innerHTML = '';
-    try { list = await fetchAll(); saveCache(list); }
-    catch (e) { $('error').textContent = 'Failed to load from Scryfall: ' + e.message; $('error').hidden = false; return; }
+  try {
+    // 'no-cache' = revalidate with the server (cheap 304 if unchanged), so we always see the latest daily build.
+    const res = await fetch(DATA_URL, { cache: force ? 'reload' : 'no-cache' });
+    if (!res.ok) throw new Error('data.json returned ' + res.status);
+    const j = await res.json();
+    cards = j.cards;
+    $('data-updated').textContent = j.source_updated_at
+      ? ` Data last updated ${new Date(j.source_updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}.` : '';
+  } catch (e) {
+    $('error').textContent = 'Failed to load card data: ' + e.message + ' (open the site through a web server, not file://)';
+    $('error').hidden = false;
+    return;
   }
-  cards = list;
-  $('status').textContent = '';
   render();
 }
 
@@ -257,7 +235,13 @@ $('summary').onclick = e => {
 $('tab-drops').onclick = () => setTab('drops');
 $('tab-top').onclick = () => setTab('top');
 $('more-btn').onclick = () => extend(rendered + PAGE_SIZE);
-$('refresh').onclick = () => { shown = PAGE_SIZE; load(true); };
+let cooldownUntil = 0;
+$('refresh').onclick = () => {
+  const wait = cooldownUntil - Date.now();
+  if (wait > 0) { $('status').textContent = `Please wait ${Math.ceil(wait / 1000)}s before refreshing again`; setTimeout(() => { $('status').textContent = ''; }, 3000); return; }
+  cooldownUntil = Date.now() + REFRESH_COOLDOWN_MS;
+  shown = PAGE_SIZE; load(true);
+};
 let t;
 $('q').oninput = e => { clearTimeout(t); t = setTimeout(() => { filter = e.target.value.trim(); shown = PAGE_SIZE; render(); }, 200); };
 
