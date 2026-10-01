@@ -1,3 +1,5 @@
+# NOTE: this file must live at the REPO ROOT: .github/workflows/update-data.yml
+# (GitHub ignores workflows inside subfolders). The site itself lives in /secretlair.
 name: Update Secret Lair data
 
 on:
@@ -19,16 +21,16 @@ jobs:
           python-version: "3.x"
 
       - name: Rebuild data.json from Scryfall bulk data
-        run: python3 scripts/build-data.py
+        run: python3 secretlair/scripts/build-data.py
 
       - name: Commit if changed
         run: |
-          if git diff --quiet -- data.json; then
+          if git diff --quiet -- secretlair/data.json; then
             echo "No changes."
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add data.json
+            git add secretlair/data.json
             git commit -m "Update Secret Lair data"
             git push
           fi
