@@ -32,9 +32,13 @@
   #summary { margin-bottom: 16px; color: var(--muted); }
   #summary .total { display: block; margin-bottom: 8px; color: var(--text); font-weight: 600; }
   #summary .sub { color: var(--muted); font-weight: normal; }
-  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .intro { color: var(--text); margin: 0 0 12px; max-width: 900px; line-height: 1.5; }
+  .intro b { color: var(--accent); }
+  #details-toggle { color: var(--accent); cursor: pointer; font-size: 13px; }
+  #details-toggle:hover { text-decoration: underline; }
+  .pills[hidden] { display: none; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; font-size: 12px; line-height: 1.6; color: var(--text); cursor: pointer; white-space: nowrap; }
-  .pill b { color: var(--accent); font-weight: 600; margin-left: 4px; }
   .pill:hover { border-color: var(--accent); }
   #more { text-align: center; padding: 16px; }
 </style>
@@ -66,7 +70,7 @@ const PAGE_SIZE = 25;
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let cards = [], tab = 'top', shown = PAGE_SIZE, filter = '';
-let groups = [], rendered = 0;
+let groups = [], rendered = 0, detailsOpen = false;
 
 function slim(c) {
   const face = c.card_faces && !c.image_uris ? c.card_faces[0] : c;
@@ -186,22 +190,44 @@ function extend(upto) {
 
 function renderSummary() {
   const distinct = new Set(cards.map(c => c.n + '|' + c.i)).size;
-  const total = `<span class="total">${distinct} distinct card arts <span class="sub">· ${cards.length} total Secret Lair printings (so far)</span></span>`;
-  if (tab !== 'top') { $('summary').innerHTML = total; return; }
+  if (tab !== 'top') { $('summary').innerHTML = `<p class="intro">There have been ${cards.length} total Secret Lair printings (so far) with ${distinct} distinct pieces of art on them.</p>`; return; }
   const counts = new Map();
   groups.forEach(g => counts.set(g.arts.length, (counts.get(g.arts.length) || 0) + 1));
   const rows = [...counts.entries()].sort((a, b) => b[0] - a[0]);
-  // Percent of cards, whole numbers; largest-remainder so the pills sum to exactly 100%.
-  const base = groups.length;
-  const pct = rows.map(([, k]) => Math.floor(k * 100 / base));
-  if (base) {
-    const left = 100 - pct.reduce((a, b) => a + b, 0);
-    rows.map(([, k], i) => [i, (k * 100 / base) % 1]).sort((a, b) => b[1] - a[1])
-      .slice(0, left).forEach(([i]) => pct[i]++);
-  }
-  const chips = rows.map(([n, k], i) =>
-    `<a class="pill" data-count="${n}">${n} art${n === 1 ? '' : 's'} (${k} card${k === 1 ? '' : 's'}) <b>${pct[i]}%</b></a>`);
-  $('summary').innerHTML = total + `<div class="pills">${chips.join('')}</div>`;
+  // Buckets: 4+ arts together, then 3, 2, 1 (biggest count first).
+  const buckets = [
+    { label: 'Cards with 4 or more arts', rows: rows.filter(([n]) => n >= 4) },
+    ...[3, 2, 1].map(n => ({ label: `Cards with ${n} art${n === 1 ? '' : 's'}`, rows: rows.filter(([m]) => m === n) })),
+  ].filter(b => b.rows.length);
+  buckets.forEach(b => {
+    b.cards = b.rows.reduce((a, [, k]) => a + k, 0);
+    b.arts = b.rows.reduce((a, [n, k]) => a + n * k, 0);
+  });
+  // Whole-number percents; largest-remainder so each column sums to exactly 100%.
+  const share = key => {
+    const base = buckets.reduce((a, b) => a + b[key], 0);
+    const out = buckets.map(b => Math.floor(b[key] * 100 / base));
+    let left = base ? 100 - out.reduce((a, b) => a + b, 0) : 0;
+    buckets.map((b, i) => [i, (b[key] * 100 / base) % 1]).sort((a, b) => b[1] - a[1])
+      .slice(0, left).forEach(([i]) => out[i]++);
+    return out;
+  };
+  const pctArts = share('arts');
+  const words = { 1: 'one', 2: 'two', 3: 'three' };
+  const last = buckets.length - 1;
+  const phrase = (b, i) => {
+    const p = `<b>${pctArts[i]}%</b>`;
+    const is4 = b.label.includes('4 or more'), n = b.rows[0][0];
+    const what = is4 ? 'four or more different treatments' : words[n];
+    if (i === 0) return `${p} of all Secret Lair cards have had ${what}${is4 ? '' : ' different treatment' + (n === 1 ? '' : 's')}`;
+    const tail = n === 1 ? 'only had one unique art treatment' : `had ${what}`;
+    return `${i === last ? 'and ' : ''}${p} have ${n === 1 ? tail : 'had ' + what}`;
+  };
+  const sentence = buckets.map(phrase).join(', ');
+  const pills = rows.map(([n, k]) => `<a class="pill" data-count="${n}">${n} art${n === 1 ? '' : 's'} (${k} card${k === 1 ? '' : 's'})</a>`).join('');
+  $('summary').innerHTML = `<p class="intro">There have been ${cards.length} total Secret Lair printings (so far) with ${distinct} distinct pieces of art on them. ${sentence}.</p>`
+    + `<a id="details-toggle" href="#">${detailsOpen ? 'Hide the breakdown' : 'See the breakdown'}</a>`
+    + `<div class="pills" ${detailsOpen ? '' : 'hidden'}>${pills}</div>`;
 }
 
 function jumpTo(n) {
@@ -226,7 +252,8 @@ function setTab(t) {
   $('tab-top').classList.toggle('active', t === 'top');
   render();
 }
-$('summary').onclick = e => { const a = e.target.closest('a[data-count]'); if (a) jumpTo(+a.dataset.count); };
+$('summary').onclick = e => {
+  if (e.target.id === 'details-toggle') { e.preventDefault(); detailsOpen = !detailsOpen; renderSummary(); return; } const a = e.target.closest('a[data-count]'); if (a) jumpTo(+a.dataset.count); };
 $('tab-drops').onclick = () => setTab('drops');
 $('tab-top').onclick = () => setTab('top');
 $('more-btn').onclick = () => extend(rendered + PAGE_SIZE);
